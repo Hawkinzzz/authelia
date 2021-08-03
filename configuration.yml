@@ -1,45 +1,16 @@
+# yamllint disable rule:comments-indentation
+---
 ###############################################################################
 #                           Authelia Configuration                            #
 ###############################################################################
-
-## The host and port to listen on.
-host: 0.0.0.0
-port: 9091
-
-## The TLS key and cert used with Authelia.
-# tls_key: /config/ssl/key.pem
-# tls_cert: /config/ssl/cert.pem
 
 ## Certificates directory specifies where Authelia will load trusted certificates (public portion) from in addition to
 ## the system certificates store.
 ## They should be in base64 format, and have one of the following extensions: *.cer, *.crt, *.pem.
 # certificates_directory: /config/certificates
 
-## The theme to display: light, dark, grey.
+## The theme to display: light, dark, grey, auto.
 theme: light
-
-##
-## Server Configuration
-##
-server:
-  ## Buffers usually should be configured to be the same value.
-  ## Explanation at https://www.authelia.com/docs/configuration/server.html
-  ## Read buffer size adjusts the server's max incoming request size in bytes.
-  ## Write buffer size does the same for outgoing responses.
-  read_buffer_size: 4096
-  write_buffer_size: 4096
-  ## Set the single level path Authelia listens on.
-  ## Must be alphanumeric chars and should not contain any slashes.
-  path: ""
-
-## Level of verbosity for logs: info, debug, trace.
-log_level: debug
-
-## Format the logs are written as: json, text.
-# log_format: json
-
-## File path where the logs will be written. If not set logs are written to stdout.
-# log_file_path: /config/authelia.log
 
 ## The secret used to generate JWT tokens when validating user identity by email confirmation. JWT Secret can also be
 ## set using a secret: https://www.authelia.com/docs/configuration/secrets.html
@@ -52,7 +23,57 @@ jwt_secret: a_very_important_secret
 ## in such a case.
 ##
 ## Note: this parameter is optional. If not provided, user won't be redirected upon successful authentication.
-default_redirection_url: https://home.example.com:8080/
+default_redirection_url: https://home.example.com/
+
+##
+## Server Configuration
+##
+server:
+  ## The address to listen on.
+  host: 0.0.0.0
+
+  ## The port to listen on.
+  port: 9091
+
+  ## Authelia by default doesn't accept TLS communication on the server port. This section overrides this behaviour.
+  tls:
+    ## The path to the DER base64/PEM format private key.
+    key: ""
+    # key: /config/ssl/key.pem
+
+    ## The path to the DER base64/PEM format public certificate.
+    certificate: ""
+    # certificate: /config/ssl/cert.pem
+
+  ## Buffers usually should be configured to be the same value.
+  ## Explanation at https://www.authelia.com/docs/configuration/server.html
+  ## Read buffer size adjusts the server's max incoming request size in bytes.
+  ## Write buffer size does the same for outgoing responses.
+  read_buffer_size: 4096
+  write_buffer_size: 4096
+
+  ## Set the single level path Authelia listens on.
+  ## Must be alphanumeric chars and should not contain any slashes.
+  path: ""
+
+  ## Enables the pprof endpoint.
+  enable_pprof: false
+
+  ## Enables the expvars endpoint.
+  enable_expvars: false
+
+log:
+  ## Level of verbosity for logs: info, debug, trace.
+  level: debug
+
+  ## Format the logs are written as: json, text.
+  # format: json
+
+  ## File path where the logs will be written. If not set logs are written to stdout.
+  # file_path: /config/authelia.log
+
+  ## Whether to also log to stdout when a log_file_path is defined.
+  # keep_stdout: false
 
 ##
 ## TOTP Configuration
@@ -116,7 +137,6 @@ authentication_backend:
     ## Depending on the option here certain other values in this section have a default value, notably all of the
     ## attribute mappings have a default value that this config overrides, you can read more about these default values
     ## at https://www.authelia.com/docs/configuration/authentication/ldap.html#defaults
-    ## THIS LDAP CONFIG IS FOR USE WITH FREEIPA!
     implementation: custom
 
     ## The url to the ldap server. Format: <scheme>://<address>[:<port>].
@@ -133,7 +153,7 @@ authentication_backend:
       ## Skip verifying the server certificate (to allow a self-signed certificate).
       ## In preference to setting this we strongly recommend you add the public portion of the certificate to the
       ## certificates directory which is defined by the `certificates_directory` option at the top of the config.
-      skip_verify: true
+      skip_verify: false
 
       ## Minimum TLS version for either Secure LDAP or LDAP StartTLS.
       minimum_version: TLS1.2
@@ -150,11 +170,11 @@ authentication_backend:
     ## otherwise it would break the configuration for that user. Technically, non-unique attributes like 'mail' can also
     ## be used but we don't recommend using them, we instead advise to use the attributes mentioned above
     ## (sAMAccountName and uid) to follow https://www.ietf.org/rfc/rfc2307.txt.
-    username_attribute: uid
+    # username_attribute: uid
 
     ## The additional_users_dn is prefixed to base_dn and delimited by a comma when searching for users.
     ## i.e. with this set to OU=Users and base_dn set to DC=a,DC=com; OU=Users,DC=a,DC=com is searched for users.
-    additional_users_dn: cn=users,cn=accounts
+    additional_users_dn: ou=users
 
     ## The users filter used in search queries to find the user profile based on input filled in login form.
     ## Various placeholders are available in the user filter:
@@ -174,7 +194,7 @@ authentication_backend:
 
     ## The additional_groups_dn is prefixed to base_dn and delimited by a comma when searching for groups.
     ## i.e. with this set to OU=Groups and base_dn set to DC=a,DC=com; OU=Groups,DC=a,DC=com is searched for groups.
-    additional_groups_dn: cn=groups,cn=accounts
+    additional_groups_dn: ou=groups
 
     ## The groups filter used in search queries to find the groups of the user.
     ## - {input} is a placeholder replaced by what the user inputs in the login form.
@@ -185,20 +205,20 @@ authentication_backend:
     ##
     ## If your groups use the `groupOfUniqueNames` structure use this instead:
     ##    (&(uniquemember={dn})(objectclass=groupOfUniqueNames))
-    groups_filter: (&(member=uid={input},cn=users,cn=accounts,dc=DOMAIN,dc=TLD)(objectclass=groupofnames))
+    groups_filter: (&(member={dn})(objectclass=groupOfNames))
 
     ## The attribute holding the name of the group.
-    group_name_attribute: cn
+    # group_name_attribute: cn
 
     ## The attribute holding the mail address of the user. If multiple email addresses are defined for a user, only the
     ## first one returned by the LDAP server is used.
-    mail_attribute: mail
+    # mail_attribute: mail
 
     ## The attribute holding the display name of the user. This will be used to greet an authenticated user.
-    display_name_attribute: givenName
+    # display_name_attribute: displayname
 
     ## The username and password of the admin user.
-    user: uid=admin,cn=users,cn=accounts,dc=DOMAIN,dc=TLD
+    user: cn=admin,dc=example,dc=com
     ## Password can also be set using a secret: https://www.authelia.com/docs/configuration/secrets.html
     password: password
 
@@ -337,6 +357,15 @@ session:
   ## The name of the session cookie.
   name: authelia_session
 
+  ## The domain to protect.
+  ## Note: the authenticator must also be in that domain.
+  ## If empty, the cookie is restricted to the subdomain of the issuer.
+  domain: example.com
+
+  ## Sets the Cookie SameSite value. Possible options are none, lax, or strict.
+  ## Please read https://www.authelia.com/docs/configuration/session.html#same_site
+  same_site: lax
+
   ## The secret to encrypt the session data. This is only used with Redis / Redis Sentinel.
   ## Secret can also be set using a secret: https://www.authelia.com/docs/configuration/secrets.html
   secret: insecure_session_secret
@@ -357,11 +386,6 @@ session:
   ## The time before the cookie expires and the session is destroyed if remember me IS selected.
   ## Value of 0 disables remember me.
   remember_me_duration: 1M
-
-  ## The domain to protect.
-  ## Note: the authenticator must also be in that domain.
-  ## If empty, the cookie is restricted to the subdomain of the issuer.
-  domain: example.com
 
   ##
   ## Redis Provider
@@ -548,4 +572,90 @@ notifier:
   #   sender: admin@example.com
   #   host: smtp.gmail.com
   #   port: 587
+
+##
+## Identity Providers
+##
+# identity_providers:
+
+  ##
+  ## OpenID Connect (Identity Provider)
+  ##
+  ## It's recommended you read the documentation before configuration of this section:
+  ## https://www.authelia.com/docs/configuration/identity-providers/oidc.html
+  # oidc:
+    ## The hmac_secret is used to sign OAuth2 tokens (authorization code, access tokens and refresh tokens).
+    ## HMAC Secret can also be set using a secret: https://www.authelia.com/docs/configuration/secrets.html
+    # hmac_secret: this_is_a_secret_abc123abc123abc
+
+    ## The issuer_private_key is used to sign the JWT forged by OpenID Connect.
+    ## Issuer Private Key can also be set using a secret: https://docs.authelia.com/configuration/secrets.html
+    # issuer_private_key: |
+    #   --- KEY START
+    #   --- KEY END
+
+    ## The lifespans configure the expiration for these token types.
+    # access_token_lifespan: 1h
+    # authorize_code_lifespan: 1m
+    # id_token_lifespan: 1h
+    # refresh_token_lifespan: 90m
+
+    ## Enables additional debug messages.
+    # enable_client_debug_messages: false
+
+    ## SECURITY NOTICE: It's not recommended changing this option, and highly discouraged to have it below 8 for
+    ## security reasons.
+    # minimum_parameter_entropy: 8
+
+    ## Clients is a list of known clients and their configuration.
+    # clients:
+      # -
+        ## The ID is the OpenID Connect ClientID which is used to link an application to a configuration.
+        # id: myapp
+
+        ## The description to show to users when they end up on the consent screen. Defaults to the ID above.
+        # description: My Application
+
+        ## The client secret is a shared secret between Authelia and the consumer of this client.
+        # secret: this_is_a_secret
+
+        ## Sets the client to public. This should typically not be set, please see the documentation for usage.
+        # public: false
+
+        ## The policy to require for this client; one_factor or two_factor.
+        # authorization_policy: two_factor
+
+        ## Audience this client is allowed to request.
+        # audience: []
+
+        ## Scopes this client is allowed to request.
+        # scopes:
+          # - openid
+          # - groups
+          # - email
+          # - profile
+
+        ## Redirect URI's specifies a list of valid case-sensitive callbacks for this client.
+        # redirect_uris:
+        # - https://oidc.example.com:8080/oauth2/callback
+
+        ## Grant Types configures which grants this client can obtain.
+        ## It's not recommended to define this unless you know what you're doing.
+        # grant_types:
+          # - refresh_token
+          # - authorization_code
+
+        ## Response Types configures which responses this client can be sent.
+        ## It's not recommended to define this unless you know what you're doing.
+        # response_types:
+          # - code
+
+        ## Response Modes configures which response modes this client supports.
+        # response_modes:
+          # - form_post
+          # - query
+          # - fragment
+
+        ## The algorithm used to sign userinfo endpoint responses for this client, either none or RS256.
+        # userinfo_signing_algorithm: none
 ...
